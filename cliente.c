@@ -100,10 +100,10 @@ void *Desembaralhar_hash()												//retirar o bloco e colocar o pixel na im_
 		{
 			Mat_to_Vector_hash(i, j, chave[k%tam_chave]);
 			printf("Bytes key: %d\n", pos_hash);
-			if (pos_hash >= 128/numbits)
+			if (pos_hash >= ceil(128.0/numbits))
 				break;
 		}
-		if (pos_hash >= 128/numbits)
+		if (pos_hash >= ceil(128.0/numbits))
 				break;
 
 	}
@@ -173,9 +173,9 @@ void *Extrair_hash()													//inverter os pixel da imagem
 	printf("Thread Extrair hash...\n");
 	sleep(1);
 
-	for(i=0; i<128/numbits; i++) {
+	for(i=0; i<ceil(128.0/numbits); i++) {
 		char bits = 0xff;
-		bits = ~(bits << (8 -numbits));
+		bits = ~(bits << (numbits));
 		hash[i] = hash[i] & bits;
 		printf("Indice: %d  bits: %x byte hash %x\n ", i, bits, hash[i]);
 	}
