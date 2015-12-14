@@ -21,11 +21,13 @@
 
 //Variáveis Globais
 int largura, altura, larg_im, alt_im, numbits, *chave;
-int tam_chave, tam_arq, num_frame, pos=0;
+int tam_chave, tam_arq, num_frame, pos=0, pos_hash = 0;
 int client_fd, port;  
 unsigned char **arquivo, *imagem, *bloco, *ip;
+char *hash;
 char larg[5], alt[5], l_im[5], a_im[5], n[2];
 FILE *f1, *f2, *f3;
+int k = 0, i=0, j=0;
 
 //Funções
 void Parametros(char *str)
@@ -66,13 +68,11 @@ void *Desembaralhar()												//retirar o bloco e colocar o pixel na im_esteg
 	//Funções
 	void Mat_to_Vector(int pos_x, int pos_y, int key);
 
-	//Variáveis locais
-	int i, j,k, l;
 
 	printf("Thread Desembaralhar...\n");
 	sleep(1);
 
-	for(i=0, k=0; i<altura*num_frame-3; i+=3)
+	for(i=0; i<altura*num_frame-3; i+=3)
 	{
 		for(j=0; j<largura-3; j+=3, k++)
 		{
@@ -85,6 +85,32 @@ void *Desembaralhar()												//retirar o bloco e colocar o pixel na im_esteg
 	
 	pthread_exit(NULL);
 }
+
+void *Desembaralhar_hash()												//retirar o bloco e colocar o pixel na im_esteg
+{
+	//Funções
+	void Mat_to_Vector_hash(int pos_x, int pos_y, int key);
+
+	printf("Thread Desembaralhar...\n");
+	sleep(1);
+	printf("Inicio desembaralha hash");
+	for(; ; i+=3)
+	{
+		for(; ; j+=3, k++)
+		{
+			Mat_to_Vector_hash(i, j, chave[k%tam_chave]);
+			printf("Bytes key: %d\n", pos_hash);
+			if (pos_hash >= 128/numbits)
+				break;
+		}
+		if (pos_hash >= 128/numbits)
+				break;
+
+	}
+	hash[pos_hash] = '\0';
+	pthread_exit(NULL);
+}
+
 
 void Mat_to_Vector(int pos_x, int pos_y, int key)
 {
@@ -103,6 +129,25 @@ void Mat_to_Vector(int pos_x, int pos_y, int key)
 	}
 }
 
+void Mat_to_Vector_hash(int pos_x, int pos_y, int key)
+{
+	int i, j, k;
+
+	for(i=0, k=0; i<3; i++)
+	{
+		for(j=0; j<3; j++, k++)
+			bloco[k] = arquivo[pos_x+j][pos_y+i];
+	}
+
+	if(key != 0 && pos_hash < alt_im*larg_im)
+	{
+		hash[pos_hash] = bloco[key-1];
+		printf("Byte bloco key: %d\n", hash[pos_hash]);
+		pos_hash++;
+	}
+}
+
+
 void *Extrair()													//inverter os pixel da imagem
 {
 	//Funções
@@ -119,6 +164,27 @@ void *Extrair()													//inverter os pixel da imagem
 
 	pthread_exit(NULL);
 }
+
+void *Extrair_hash()													//inverter os pixel da imagem
+{
+	//Variáveis locais
+	int i;
+
+	printf("Thread Extrair hash...\n");
+	sleep(1);
+
+	for(i=0; i<128/numbits; i++) {
+		char bits = 0xff;
+		bits = ~(bits << (8 -numbits));
+		hash[i] = hash[i] & bits;
+		printf("Indice: %d  bits: %x byte hash %x\n ", i, bits, hash[i]);
+	}
+
+
+	pthread_exit(NULL);
+}
+
+
 
 unsigned char Inverter(unsigned char pixel)
 {
@@ -146,8 +212,6 @@ void Interromper()
 
 	pos = larg_im*alt_im;
 }
-
-
 
 
 
@@ -198,7 +262,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Falha na criacao do socket.\n\n");
 		exit(1);	
 	} 
-	printf("Socket criado...\n");
+	printf("Socket criado\n");
 
 	//Conectando
 	if(connect(client_fd, (struct sockaddr *) &client_addr, sizeof(client_addr)) == -1)
@@ -308,6 +372,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Erro na alocacao de memoria da chave.\n\n");
 		exit(1);
 	}	
+	hash = (char *) calloc(128/numbits + 1, sizeof(char));
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -320,6 +385,8 @@ int main(int argc, char **argv)
 	//Threads
 	pthread_t thread1;
 	pthread_t thread2;
+	pthread_t thread3;
+	pthread_t thread4;
 
 	system("clear");
 	printf("Criando threads...\n");
@@ -329,6 +396,10 @@ int main(int argc, char **argv)
 		pthread_join (thread1, NULL);	
 		pthread_create (&thread2, NULL, (void *)Extrair, NULL);	
 		pthread_join (thread2, NULL);
+		pthread_create (&thread3, NULL, (void *)Desembaralhar_hash, NULL);	
+		pthread_join (thread3, NULL);
+		pthread_create (&thread4, NULL, (void *)Extrair_hash, NULL);	
+		pthread_join (thread4, NULL);
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -436,6 +507,7 @@ int main(int argc, char **argv)
 		free(img);	
 
 		printf("Envio concluido com sucesso...\n");
+	
 	}
 
 	//Fechando conexão
