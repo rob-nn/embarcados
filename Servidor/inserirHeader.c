@@ -19,10 +19,11 @@ int main (int argc, char *argv[]){
 	ROW = atoi(argv[3]);
 	
 	/*	Nome do Arquivo de Saida	*/
-	nomeImgSaida = (char *)malloc((strlen(nomeImgEntrada)+2)*sizeof(char));
-	for ( i = 0; i < strlen(nomeImgEntrada)-2; i++ )
-		nomeImgSaida[i] = nomeImgEntrada[i];
+	nomeImgSaida = (char *)malloc(255);
+	nomeImgSaida[0] = "\0";
+	strcat(nomeImgSaida, nomeImgEntrada); 
 	strcat(nomeImgSaida, ".pgm");
+	printf("Gerando imagem com cabeçalho: %d", nomeSaida);
 
 	/*	Ponteiro para Imagem de Entrada	*/
 	FILE *ptrImgEntrada;
@@ -41,5 +42,4 @@ int main (int argc, char *argv[]){
 	/*	Libera memória alocada	*/
 	free( nomeImgSaida );
 	free( imagem );
-	return 0;
 }
