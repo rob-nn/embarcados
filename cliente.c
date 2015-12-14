@@ -29,6 +29,45 @@ char larg[5], alt[5], l_im[5], a_im[5], n[2];
 FILE *f1, *f2, *f3;
 int k = 0, i=0, j=0;
 
+
+
+void insertHeader(char * nomeImgEntrada, int col, int row){
+	unsigned int ROW, COL;
+	char *nomeImgSaida;
+	unsigned char *imagem;
+	unsigned int i;
+	
+	/*	Conversão de Parâmetros	*/
+	COL = col;
+	ROW = row;
+	
+	/*	Nome do Arquivo de Saida	*/
+	nomeImgSaida = (char *)malloc(255);
+	nomeImgSaida[0] = '\0';
+
+	strcat(nomeImgSaida, nomeImgEntrada);
+	nomeImgSaida[strcspn(nomeImgSaida, ".y")] = "\0";
+	strcat(nomeImgSaida, ".pgm");
+
+	/*	Ponteiro para Imagem de Entrada	*/
+	FILE *ptrImgEntrada;
+	ptrImgEntrada = fopen(nomeImgEntrada, "rb");
+	imagem = (unsigned char *)malloc(ROW*COL*sizeof(unsigned char));
+	fread(imagem, sizeof(unsigned char), ROW*COL, ptrImgEntrada);	
+	fclose(ptrImgEntrada);
+	
+	/*	Ponteiro para Imagem de Saida	*/
+	FILE *ptrImgSaida;
+	ptrImgSaida = fopen("saida.pgm", "w");
+	fprintf(ptrImgSaida, "P5 %d %d 255 ", COL, ROW);
+	fwrite(imagem, sizeof(unsigned char), ROW*COL, ptrImgSaida);
+	fclose(ptrImgSaida);
+	
+	/*	Libera memória alocada	*/
+	free( nomeImgSaida );
+	free( imagem );
+}
+
 //Funções
 void Parametros(char *str)
 {
@@ -447,17 +486,12 @@ int main(int argc, char **argv)
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	//Usando execl para colocar cabeçalho na imagem de saída
 	int ret;
 
 	ret = fork();
 
 	if(ret == 0)
 	{
-		//processo filho
-		printf("Colocando cabecalho.\n\n");
-		execl("cabecalho", "cabecalho", "saida.y", l_im, a_im, NULL);
-		printf("\nERRO! A funcao execl falhou.");	
 	}
 	else	
 	{
@@ -467,8 +501,9 @@ int main(int argc, char **argv)
 		unsigned char *img, pixel;
 		int tamanho_img;
 
+		insertHeader("saida.y", larg_im, alt_im);
 		//Abrindo arquivo com cabecalho
-		FILE *f3 = fopen("saida.y", "rb");
+		FILE *f3 = fopen("saida.pgm", "rb");
 		if(f3 == NULL)
 		{
 			system("clear");
@@ -477,7 +512,7 @@ int main(int argc, char **argv)
 		}
 	
 		//Calculando tamanho do arquivo
-		tamanho_img = larg_im*alt_im + 9 + strlen(l_im) + strlen(a_im);
+		tamanho_img = larg_im*alt_im + 1000;
 		
 		//Alocando imagem
 		img = (unsigned char *) calloc(tamanho_img, sizeof(unsigned char));
@@ -488,7 +523,7 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 
-		fread(img, sizeof(unsigned char), tamanho_img, f3);
+		tamanho_img = fread(img, sizeof(unsigned char), tamanho_img, f3);
 		fclose(f3);
 
 		for(i=0; i<tamanho_img; i++)

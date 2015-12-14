@@ -9,45 +9,8 @@
 #include <arpa/inet.h>
 
 //Variaveis globais
-int server_fd, client_fd, tam, tamanho_img, port, w_im, h_im;
-unsigned char *img, *ip;
-
-void insertHeader(char * nomeImgEntrada, int col, int row){
-	unsigned int ROW, COL;
-	char *nomeImgSaida;
-	unsigned char *imagem;
-	unsigned int i;
-	
-	/*	Conversão de Parâmetros	*/
-	COL = col;
-	ROW = row;
-	
-	/*	Nome do Arquivo de Saida	*/
-	nomeImgSaida = (char *)malloc(255);
-	nomeImgSaida[0] = '\0';
-
-	strcat(nomeImgSaida, nomeImgEntrada);
-	nomeImgSaida[strcspn(nomeImgSaida, ".y")] = "\0";
-	strcat(nomeImgSaida, ".pgm");
-
-	/*	Ponteiro para Imagem de Entrada	*/
-	FILE *ptrImgEntrada;
-	ptrImgEntrada = fopen(nomeImgEntrada, "rb");
-	imagem = (unsigned char *)malloc(ROW*COL*sizeof(unsigned char));
-	fread(imagem, sizeof(unsigned char), ROW*COL, ptrImgEntrada);	
-	fclose(ptrImgEntrada);
-	
-	/*	Ponteiro para Imagem de Saida	*/
-	FILE *ptrImgSaida;
-	ptrImgSaida = fopen("saida.pgm", "w");
-	fprintf(ptrImgSaida, "P5 %d %d 255 ", COL, ROW);
-	fwrite(imagem, sizeof(unsigned char), ROW*COL, ptrImgSaida);
-	fclose(ptrImgSaida);
-	
-	/*	Libera memória alocada	*/
-	free( nomeImgSaida );
-	free( imagem );
-}
+int server_fd, client_fd, tam, port;
+unsigned char *ip;
 
 int main(int argc, char *argv[])
 {
@@ -55,17 +18,15 @@ int main(int argc, char *argv[])
 	unsigned char pixel;
 
 	//Validando os parametros
-	if(argc != 5)
+	if(argc != 3)
 	{
 		system("clear");
-		fprintf(stderr, "Parametros incorretos, digite: <Largura> <Altura> <Porta> <IP>\n\n");
+		fprintf(stderr, "Parametros incorretos, digite:  <Porta> <IP>\n\n");
 		exit(1);	
 	}
 
-	w_im = atoi(argv[1]);
-	h_im = atoi(argv[2]);
-	port = atoi(argv[3]);
-	ip = argv[4];
+	port = atoi(argv[1]);
+	ip = argv[2];
 
 	//Estrutura do socket
 	struct sockaddr_in client_addr, server_addr;
@@ -116,32 +77,7 @@ int main(int argc, char *argv[])
 	//Recebendo informação
 	printf("Recebendo dados...\n");
 
-	tamanho_img = 9 + w_im*h_im + strlen(argv[1]) + strlen(argv[2]);
-	
-	//Alocando imagem recebida
-	img = (unsigned char *) calloc(tamanho_img, sizeof(unsigned char));
-	if(img == NULL)
-	{
-		system("clear");
-		fprintf(stderr, "Erro na alocação de memoria para imagem de saida\n\n");
-		exit(1);	
-	}
-	
-	for(i=0; i<tamanho_img; i++)
-	{
-		if(recv(client_fd, &pixel, 1, 0) == -1)
-		{
-			system("clear");
-			fprintf(stderr, "Erro no recebimento dos dados\n\n");
-			exit(1);	
-		}	
-		
-		img[i] = pixel;
-	}	
-
-	printf("Imagem recebida com sucesso...");
-
-	FILE *f = fopen("saida.y", "wb");
+	FILE *f = fopen("saida.pgm", "wb");
 	if(f == NULL)
 	{
 		system("clear");
@@ -149,10 +85,14 @@ int main(int argc, char *argv[])
 		exit(1);	
 	}
 
-	fwrite(img, sizeof(unsigned char), tamanho_img, f);
+	
+	while (recv(client_fd, &pixel, 1, 0))
+	{
+		fwrite(&pixel, sizeof(unsigned char), 1, f);
+	} 
+	printf("Imagem recebida com sucesso...\n");
 	printf("Imagem gerada com sucesso...\n\n");
 
-	insertHeader("saida.y", w_im, h_im);
 
 	return 0;
 }
