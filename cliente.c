@@ -24,12 +24,32 @@ int largura, altura, larg_im, alt_im, numbits, *chave;
 int tam_chave, tam_arq, num_frame, pos=0, pos_hash = 0;
 int client_fd, port;  
 unsigned char **arquivo, *imagem, *bloco, *ip;
-char *hash;
+unsigned char *hash;
+long * position;
 char larg[5], alt[5], l_im[5], a_im[5], n[2];
 FILE *f1, *f2, *f3;
 int k = 0, i=0, j=0;
 
 
+void zeraBitsEntrada(char * nomeArquivoEntrada){
+	char *nomeImgSaida;
+	
+	FILE *fEntrada;
+	fEntrada = fopen(nomeArquivoEntrada, "r+b");
+	for (int i =0; i < ceil(128.0/numbits); i++)
+	{
+		unsigned char  new_byte = 0xff;
+		unsigned char  old_byte = 0xff;
+		new_byte <<= numbits;
+		fseek (fEntrada, position[i] * sizeof(unsigned char), SEEK_SET); 
+		fread(&old_byte, sizeof(unsigned char), sizeof(unsigned char), fEntrada);	
+		fseek (fEntrada, position[i] * sizeof(unsigned char), SEEK_SET); 
+		new_byte &= old_byte;
+		fwrite(&new_byte, sizeof(unsigned char), sizeof(unsigned char), fEntrada);
+	}
+
+	fclose(fEntrada);
+}
 
 void insertHeader(char * nomeImgEntrada, int col, int row){
 	unsigned int ROW, COL;
@@ -181,11 +201,11 @@ void Mat_to_Vector_hash(int pos_x, int pos_y, int key)
 	if(key != 0 && pos_hash < alt_im*larg_im)
 	{
 		hash[pos_hash] = bloco[key-1];
+		position[pos_hash] = pos_x * largura + pos_y;
 		printf("Byte bloco key: %d\n", hash[pos_hash]);
 		pos_hash++;
 	}
 }
-
 
 void *Extrair()													//inverter os pixel da imagem
 {
@@ -213,13 +233,19 @@ void *Extrair_hash()													//inverter os pixel da imagem
 	sleep(1);
 
 	for(i=0; i<ceil(128.0/numbits); i++) {
-		char bits = 0xff;
+		unsigned char bits = 0xff;
 		bits = ~(bits << (numbits));
+		unsigned char inversor = 0;
 		hash[i] = hash[i] & bits;
 		printf("Indice: %d  bits: %x byte hash %x\n ", i, bits, hash[i]);
+		for (int index = 0; index < numbits; index++) {
+			inversor <<= 1;
+			inversor |= (hash[i] &  0x01);
+			hash[i] >>= 1;
+		}	
+		hash[i] = inversor;
+		printf("Byte hash %x\n ", hash[i]);
 	}
-
-
 	pthread_exit(NULL);
 }
 
@@ -411,7 +437,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Erro na alocacao de memoria da chave.\n\n");
 		exit(1);
 	}	
-	hash = (char *) calloc(128/numbits + 1, sizeof(char));
+	hash = (char *) calloc(ceil(128.0/numbits),  sizeof(char));
+	position = (long *) calloc(ceil(128.0/numbits),  sizeof(long));
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -471,6 +498,12 @@ int main(int argc, char **argv)
 		printf("%d ", chave[i]);
 	printf("\nQuantidade de pixel da imagem = %d", pos);
 
+	printf("\nHash extraído: ");
+	for (int i =0; i < ceil(128.0/numbits); i++) {
+		printf("%x", hash[i]);
+	}
+
+
 	printf("\n\n===============================================================================");	
 	printf("\n\n");
 
@@ -501,6 +534,7 @@ int main(int argc, char **argv)
 		unsigned char *img, pixel;
 		int tamanho_img;
 
+		//zeraBitsEntrada(argv[1]);
 		insertHeader("saida.y", larg_im, alt_im);
 		//Abrindo arquivo com cabecalho
 		FILE *f3 = fopen("saida.pgm", "rb");
@@ -529,7 +563,6 @@ int main(int argc, char **argv)
 		for(i=0; i<tamanho_img; i++)
 		{
 			pixel = img[i];
-			
 			if(send(client_fd, &pixel, 1, 0) == -1)
 			{
 				system("clear");
