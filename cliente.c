@@ -238,7 +238,8 @@ void *Extrair_hash()													//inverter os pixel da imagem
 		unsigned char inversor = 0;
 		hash[i] = hash[i] & bits;
 		printf("Indice: %d  bits: %x byte hash %x\n ", i, bits, hash[i]);
-		for (int index = 0; index < numbits; index++) {
+		int index;
+		for (index = 0; index < numbits; index++) {
 			inversor <<= 1;
 			inversor |= (hash[i] &  0x01);
 			hash[i] >>= 1;
@@ -499,8 +500,9 @@ int main(int argc, char **argv)
 	printf("\nQuantidade de pixel da imagem = %d", pos);
 
 	printf("\nHash extraído: ");
-	for (int i =0; i < ceil(128.0/numbits); i++) {
-		printf("%x", hash[i]);
+	int ix;
+	for (ix =0; ix < ceil(128.0/numbits); ix++) {
+		printf("%x", hash[ix]);
 	}
 
 
