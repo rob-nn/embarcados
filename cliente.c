@@ -33,10 +33,10 @@ int k = 0, i=0, j=0;
 
 void zeraBitsEntrada(char * nomeArquivoEntrada){
 	char *nomeImgSaida;
-	
+	int i ;
 	FILE *fEntrada;
 	fEntrada = fopen(nomeArquivoEntrada, "r+b");
-	for (int i =0; i < ceil(128.0/numbits); i++)
+	for (i=0; i < ceil(128.0/numbits); i++)
 	{
 		unsigned char  new_byte = 0xff;
 		unsigned char  old_byte = 0xff;
